@@ -67,21 +67,37 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
   }, [sessionId])
 
   useEffect(() => {
-    multiplayerService.subscribeToGameSession(sessionId, {
-      onSessionUpdate: (newSession) => {
-        setSession(newSession)
-        setCurrentTurn(newSession.current_turn_index)
-        
-        if (newSession.status === 'finished') {
-          onGameEnd(newSession.scores)
+    if (session) {
+      console.log('MultiplayerGameView: Setting up subscription for session', session.id)
+      
+      const channel = multiplayerService.subscribeToGameSession(session.id, {
+        onSessionUpdate: (newSession) => {
+          console.log('MultiplayerGameView: Session update received', newSession)
+          setSession(newSession)
+          setCurrentTurn(newSession.current_turn_index)
+          
+          if (newSession.status === 'finished') {
+            onGameEnd(newSession.scores)
+          }
+        },
+        onPlayerUpdate: (updatedPlayers) => {
+          console.log('MultiplayerGameView: Player update received', updatedPlayers)
+          setPlayers(updatedPlayers)
+        },
+        onMoveUpdate: (updatedMoves) => {
+          console.log('MultiplayerGameView: Move update received', updatedMoves)
+          setMoves(updatedMoves)
         }
-      },
-      onPlayerUpdate: setPlayers,
-      onMoveUpdate: setMoves
-    })
+      })
 
-    return () => multiplayerService.unsubscribe(sessionId)
-  }, [sessionId, onGameEnd])
+      console.log('MultiplayerGameView: Subscription active, channel status:', channel)
+
+      return () => {
+        console.log('MultiplayerGameView: Cleaning up subscription for session', session.id)
+        multiplayerService.unsubscribe(session.id)
+      }
+    }
+  }, [sessionId, onGameEnd, session])
 
   useEffect(() => {
     if (isMyTurn && inputRef.current) {
