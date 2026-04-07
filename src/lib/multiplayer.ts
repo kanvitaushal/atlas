@@ -250,13 +250,18 @@ class MultiplayerService {
           filter: `game_session_id=eq.${sessionId}`
         },
         async (payload) => {
-          console.log('Move update:', payload)
+          console.log('Move update received:', payload)
+          console.log('Move update payload type:', payload.eventType)
+          console.log('Move update payload data:', payload.new)
+          
           if (callbacks.onMoveUpdate) {
             const { data } = await supabase
               .from('game_moves')
               .select('*')
               .eq('game_session_id', sessionId)
               .order('move_number')
+            
+            console.log('Fetched moves from database:', data)
             callbacks.onMoveUpdate(data || [])
           }
         }
