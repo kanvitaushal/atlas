@@ -13,12 +13,13 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   const { user } = useAuth()
   const [mode, setMode] = useState<'create' | 'join'>('create')
   const [roomCode, setRoomCode] = useState('')
+  const [roomName, setRoomName] = useState('')
+  const [playerName, setPlayerName] = useState('')
   const [session, setSession] = useState<GameSession | null>(null)
   const [players, setPlayers] = useState<GamePlayer[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
-  const [playerNames, setPlayerNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (session) {
@@ -67,23 +68,34 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   }, [session?.id])
 
   const createGame = async () => {
-    if (!user) return
+    if (!user || !roomName.trim() || !playerName.trim()) {
+      setError('Please enter both room name and your name')
+      return
+    }
     
+    console.log('MultiplayerLobby: Creating game', { roomName, playerName })
     setLoading(true)
     setError(null)
     
     try {
-      const { session: newSession } = await multiplayerService.createGameSession(user.id, {
-        game_mode: 'multiplayer',
-        categories: ['country', 'city', 'state'],
-        continents: [],
-        timer_enabled: false,
-        timer_limit_sec: 300
-      })
+      const { session: newSession } = await multiplayerService.createGameSession(
+        user.id, 
+        playerName.trim(), 
+        roomName.trim(),
+        {
+          game_mode: 'multiplayer',
+          categories: ['country', 'city', 'state'],
+          continents: [],
+          timer_enabled: false,
+          timer_limit_sec: 300
+        }
+      )
       
+      console.log('MultiplayerLobby: Game created successfully', newSession)
       setSession(newSession)
       setMode('join') // Switch to join mode to show room code
     } catch (err) {
+      console.error('MultiplayerLobby: Failed to create game', err)
       setError(err instanceof Error ? err.message : 'Failed to create game')
     } finally {
       setLoading(false)
@@ -91,14 +103,21 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   }
 
   const joinGame = async () => {
-    if (!user || !roomCode.trim()) return
+    if (!user || !roomCode.trim() || !playerName.trim()) {
+      setError('Please enter room code and your name')
+      return
+    }
     
-    console.log('MultiplayerLobby: Joining game with room code:', roomCode.trim().toUpperCase())
+    console.log('MultiplayerLobby: Joining game', { roomCode: roomCode.trim().toUpperCase(), playerName })
     setLoading(true)
     setError(null)
     
     try {
-      const gameSession = await multiplayerService.joinGameSession(roomCode.trim().toUpperCase(), user.id)
+      const gameSession = await multiplayerService.joinGameSession(
+        roomCode.trim().toUpperCase(), 
+        user.id, 
+        playerName.trim()
+      )
       console.log('MultiplayerLobby: Successfully joined session:', gameSession)
       setSession(gameSession)
       
@@ -166,12 +185,43 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
 
           {mode === 'create' ? (
             <div className="flex flex-col gap-4">
-              <div className="rounded-lg bg-white/5 p-6 text-center">
-                <p className="text-cyan-100/80 mb-4">Create a new game room and share the code with friends</p>
+              <div className="rounded-lg bg-white/5 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Create Game Room</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Room Name
+                    </label>
+                    <input
+                      type="text"
+                      value={roomName}
+                      onChange={(e) => setRoomName(e.target.value)}
+                      placeholder="Enter room name"
+                      className="w-full rounded-lg bg-white/10 px-4 py-3 text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      maxLength={30}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full rounded-lg bg-white/10 px-4 py-3 text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      maxLength={20}
+                    />
+                  </div>
+                </div>
+
                 <button
                   onClick={createGame}
-                  disabled={loading || !user}
-                  className="w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
+                  disabled={loading || !user || !roomName.trim() || !playerName.trim()}
+                  className="mt-6 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
                 >
                   {loading ? 'Creating...' : 'Create Game Room'}
                 </button>
@@ -180,21 +230,42 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
           ) : (
             <div className="flex flex-col gap-4">
               <div className="rounded-lg bg-white/5 p-6">
-                <label className="block text-sm font-medium text-cyan-100/80 mb-2">
-                  Room Code
-                </label>
-                <input
-                  type="text"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  placeholder="Enter 6-character code"
-                  className="w-full rounded-lg bg-white/10 px-4 py-3 text-center text-lg font-mono text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                  maxLength={6}
-                />
+                <h3 className="text-lg font-semibold text-white mb-4">Join Game Room</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Room Code
+                    </label>
+                    <input
+                      type="text"
+                      value={roomCode}
+                      onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                      placeholder="Enter 6-character code"
+                      className="w-full rounded-lg bg-white/10 px-4 py-3 text-center text-lg font-mono text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      maxLength={6}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full rounded-lg bg-white/10 px-4 py-3 text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      maxLength={20}
+                    />
+                  </div>
+                </div>
+
                 <button
                   onClick={joinGame}
-                  disabled={loading || !roomCode.trim() || !user}
-                  className="mt-4 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
+                  disabled={loading || !roomCode.trim() || !playerName.trim() || !user}
+                  className="mt-6 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
                 >
                   {loading ? 'Joining...' : 'Join Game'}
                 </button>
@@ -224,8 +295,9 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
         <div className="flex flex-col gap-6">
           <div className="rounded-lg bg-white/5 p-6">
             <div className="text-center mb-4">
-              <h2 className="text-xl font-semibold text-white mb-2">Game Room</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">{session.room_name}</h2>
               <div className="text-3xl font-mono text-cyan-300">{session.room_code}</div>
+              <p className="text-sm text-cyan-100/60 mt-1">Host: {session.host_name}</p>
               <p className="text-sm text-cyan-100/60 mt-2">Share this code with friends</p>
             </div>
 
@@ -243,25 +315,14 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
                       {player.player_index + 1}
                     </div>
                     <div className="flex-1">
-                      {player.user_id === user?.id ? (
-                        <input
-                          type="text"
-                          value={playerNames[player.id] || ''}
-                          onChange={(e) => setPlayerNames(prev => ({ ...prev, [player.id]: e.target.value }))}
-                          placeholder="Enter your name"
-                          className="w-full rounded-lg bg-white/10 px-3 py-1 text-sm text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                          maxLength={20}
-                        />
-                      ) : (
-                        <div>
-                          <div className="text-white font-medium">
-                            {playerNames[player.id] || `Player ${player.player_index + 1}`}
-                          </div>
-                          <div className="text-xs text-cyan-100/60">
-                            Online
-                          </div>
-                        </div>
-                      )}
+                      <div className="text-white font-medium">
+                        {player.player_name}
+                        {player.user_id === user?.id && ' (You)'}
+                      </div>
+                      <div className="text-xs text-cyan-100/60">
+                        {player.is_online ? 'Online' : 'Offline'}
+                        {player.player_index === 0 && ' - Host'}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -4,7 +4,9 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 export interface GameSession {
   id: string
   room_code: string
+  room_name: string
   host_id: string
+  host_name: string
   status: 'waiting' | 'playing' | 'finished'
   game_mode: 'solo' | 'two' | 'multiplayer'
   categories: string[]
@@ -23,6 +25,7 @@ export interface GamePlayer {
   id: string
   game_session_id: string
   user_id: string
+  player_name: string
   player_index: number
   is_ready: boolean
   is_online: boolean
@@ -57,7 +60,7 @@ export interface UserProfile {
 class MultiplayerService {
   private channels: Map<string, RealtimeChannel> = new Map()
 
-  async createGameSession(hostId: string, settings: {
+  async createGameSession(hostId: string, hostName: string, roomName: string, settings: {
     game_mode: 'solo' | 'two' | 'multiplayer'
     categories: string[]
     continents: string[]
@@ -67,13 +70,18 @@ class MultiplayerService {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
 
+    console.log('MultiplayerService: Creating game session', { hostId, hostName, roomName })
+
     const roomCode = this.generateRoomCode()
     
-    const { data, error } = await supabase
+    // Create the game session
+    const { data: session, error: sessionError } = await supabase
       .from('game_sessions')
       .insert({
         room_code: roomCode,
+        room_name: roomName,
         host_id: hostId,
+        host_name: hostName,
         status: 'waiting',
         game_mode: settings.game_mode,
         categories: settings.categories,
@@ -85,14 +93,42 @@ class MultiplayerService {
       .select()
       .single()
 
-    if (error) throw error
+    if (sessionError) {
+      console.error('MultiplayerService: Failed to create session', sessionError)
+      throw sessionError
+    }
+
+    console.log('MultiplayerService: Session created', session)
+
+    // Add host as first player
+    const { data: hostPlayer, error: playerError } = await supabase
+      .from('game_players')
+      .insert({
+        game_session_id: session.id,
+        user_id: hostId,
+        player_name: hostName,
+        player_index: 0,
+        is_ready: false,
+        is_online: true
+      })
+      .select()
+      .single()
+
+    if (playerError) {
+      console.error('MultiplayerService: Failed to add host to players', playerError)
+      throw playerError
+    }
+
+    console.log('MultiplayerService: Host added to players', hostPlayer)
     
-    return { room_code: roomCode, session: data }
+    return { room_code: roomCode, session }
   }
 
-  async joinGameSession(roomCode: string, userId: string): Promise<GameSession> {
+  async joinGameSession(roomCode: string, userId: string, playerName: string): Promise<GameSession> {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
+
+    console.log('MultiplayerService: Joining game session', { roomCode, userId, playerName })
 
     // Get game session
     const { data: session, error: sessionError } = await supabase
@@ -101,7 +137,12 @@ class MultiplayerService {
       .eq('room_code', roomCode)
       .single()
 
-    if (sessionError) throw sessionError
+    if (sessionError) {
+      console.error('MultiplayerService: Failed to get session', sessionError)
+      throw sessionError
+    }
+
+    console.log('MultiplayerService: Found session', session)
 
     // Get current players to determine player index
     const { data: existingPlayers, error: playersError } = await supabase
@@ -109,22 +150,42 @@ class MultiplayerService {
       .select('*')
       .eq('game_session_id', session.id)
 
-    if (playersError) throw playersError
+    if (playersError) {
+      console.error('MultiplayerService: Failed to get existing players', playersError)
+      throw playersError
+    }
 
-    const playerIndex = existingPlayers.length
+    console.log('MultiplayerService: Existing players', existingPlayers)
+
+    // Check if user is already in the game
+    const existingPlayer = existingPlayers?.find(p => p.user_id === userId)
+    if (existingPlayer) {
+      console.log('MultiplayerService: User already in game', existingPlayer)
+      return session
+    }
+
+    const playerIndex = existingPlayers?.length || 0
 
     // Add player to game
-    const { error: joinError } = await supabase
+    const { data: newPlayer, error: joinError } = await supabase
       .from('game_players')
       .insert({
         game_session_id: session.id,
         user_id: userId,
+        player_name: playerName,
         player_index: playerIndex,
         is_ready: false,
         is_online: true
       })
+      .select()
+      .single()
 
-    if (joinError) throw joinError
+    if (joinError) {
+      console.error('MultiplayerService: Failed to add player', joinError)
+      throw joinError
+    }
+
+    console.log('MultiplayerService: Player added successfully', newPlayer)
 
     return session
   }

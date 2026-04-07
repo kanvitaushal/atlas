@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 CREATE TABLE IF NOT EXISTS game_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_code TEXT UNIQUE NOT NULL,
+  room_name TEXT NOT NULL DEFAULT 'Game Room',
   host_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  host_name TEXT NOT NULL DEFAULT 'Host',
   status TEXT NOT NULL CHECK (status IN ('waiting', 'playing', 'finished')),
   game_mode TEXT NOT NULL CHECK (game_mode IN ('solo', 'two', 'multiplayer')),
   categories TEXT[] NOT NULL DEFAULT '{}',
@@ -37,6 +39,7 @@ CREATE TABLE IF NOT EXISTS game_players (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_session_id UUID REFERENCES game_sessions(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  player_name TEXT NOT NULL DEFAULT 'Player',
   player_index INTEGER NOT NULL,
   is_ready BOOLEAN DEFAULT false,
   is_online BOOLEAN DEFAULT true,
