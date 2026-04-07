@@ -39,9 +39,28 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
         setPlayers(players)
       })
 
+      // Fallback polling for player updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const updatedPlayers = await multiplayerService.getGamePlayers(session.id)
+          console.log('MultiplayerLobby: Polling players', updatedPlayers)
+          setPlayers(prevPlayers => {
+            // Only update if players actually changed
+            if (JSON.stringify(prevPlayers) !== JSON.stringify(updatedPlayers)) {
+              console.log('MultiplayerLobby: Players changed via polling', updatedPlayers)
+              return updatedPlayers
+            }
+            return prevPlayers
+          })
+        } catch (err) {
+          console.error('MultiplayerLobby: Error polling players', err)
+        }
+      }, 2000) // Poll every 2 seconds
+
       return () => {
         console.log('MultiplayerLobby: Unsubscribing from session', session.id)
         multiplayerService.unsubscribe(session.id)
+        clearInterval(pollInterval)
       }
     }
   }, [session?.id])
