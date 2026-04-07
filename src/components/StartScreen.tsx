@@ -20,6 +20,8 @@ interface StartScreenProps {
   onStart: () => void
   onOpenAtlas: () => void
   onMultiplayer?: () => void
+  playerNames?: [string, string]
+  onPlayerNamesChange?: (names: [string, string]) => void
 }
 
 export function StartScreen({
@@ -37,6 +39,8 @@ export function StartScreen({
   onStart,
   onOpenAtlas,
   onMultiplayer,
+  playerNames = ['Player 1', 'Player 2'],
+  onPlayerNamesChange,
 }: StartScreenProps) {
   const canStart = categories.size > 0 && !loading
 
@@ -125,6 +129,42 @@ export function StartScreen({
             </button>
           ))}
         </div>
+
+        {mode === 'two' && (
+          <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-medium text-cyan-100/80">Player Names</h3>
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="player1" className="block text-xs text-cyan-100/60 mb-1">
+                  Player 1
+                </label>
+                <input
+                  id="player1"
+                  type="text"
+                  value={playerNames[0]}
+                  onChange={(e) => onPlayerNamesChange?.([e.target.value, playerNames[1]])}
+                  placeholder="Enter Player 1 name"
+                  className="w-full rounded-lg bg-white/10 px-3 py-2 text-sm text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                  maxLength={20}
+                />
+              </div>
+              <div>
+                <label htmlFor="player2" className="block text-xs text-cyan-100/60 mb-1">
+                  Player 2
+                </label>
+                <input
+                  id="player2"
+                  type="text"
+                  value={playerNames[1]}
+                  onChange={(e) => onPlayerNamesChange?.([playerNames[0], e.target.value])}
+                  placeholder="Enter Player 2 name"
+                  className="w-full rounded-lg bg-white/10 px-3 py-2 text-sm text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                  maxLength={20}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
           <label className="flex cursor-pointer items-center gap-3">

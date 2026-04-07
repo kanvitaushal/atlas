@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useAuth } from './auth/AuthContext'
+import { useAuth, AuthProvider } from './auth/AuthContext'
 import { AtlasView } from './components/AtlasView'
 import { BugHelpModal } from './components/BugHelpModal'
 import { GameView } from './components/GameView'
@@ -39,6 +39,7 @@ function AppContent() {
   const [multiplayerSessionId, setMultiplayerSessionId] = useState<string | null>(null)
   const [finalScores, setFinalScores] = useState<Record<string, number> | null>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [playerNames, setPlayerNames] = useState<[string, string]>(['Player 1', 'Player 2'])
 
   const toggleCategory = useCallback((c: PlaceCategory) => {
     setCategories((prev) => {
@@ -111,8 +112,18 @@ function AppContent() {
 
       <header className="relative z-10 border-b border-white/10 bg-white/5 px-4 py-3">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div className="text-lg font-semibold text-white">
-            Atlas
+          <div className="flex items-center gap-3">
+            {phase !== 'menu' && (
+              <button
+                onClick={() => { playClick(); handleBackToMenu() }}
+                className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-cyan-100/80 transition hover:bg-white/10"
+              >
+                ← Back
+              </button>
+            )}
+            <div className="text-lg font-semibold text-white">
+              Atlas
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {user ? (
@@ -156,6 +167,8 @@ function AppContent() {
             onStart={startGame}
             onOpenAtlas={() => setPhase('atlas')}
             onMultiplayer={startMultiplayerGame}
+            playerNames={playerNames}
+            onPlayerNamesChange={setPlayerNames}
           />
         )}
         {phase === 'loading' && (
@@ -173,6 +186,9 @@ function AppContent() {
             onTimerLimit={setTimerLimitSec}
             onStart={startGame}
             onOpenAtlas={() => setPhase('atlas')}
+            onMultiplayer={startMultiplayerGame}
+            playerNames={playerNames}
+            onPlayerNamesChange={setPlayerNames}
           />
         )}
         {phase === 'play' && index && (
