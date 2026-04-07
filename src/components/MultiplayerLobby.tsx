@@ -1,0 +1,260 @@
+import { useState, useEffect } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { multiplayerService, type GameSession, type GamePlayer } from '../lib/multiplayer'
+import { playClick } from '../lib/sounds'
+
+interface MultiplayerLobbyProps {
+  onGameStart: (sessionId: string) => void
+  onBack: () => void
+}
+
+export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps) {
+  const { user } = useAuth()
+  const [mode, setMode] = useState<'create' | 'join'>('create')
+  const [roomCode, setRoomCode] = useState('')
+  const [session, setSession] = useState<GameSession | null>(null)
+  const [players, setPlayers] = useState<GamePlayer[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (session) {
+      multiplayerService.subscribeToGameSession(session.id, {
+        onSessionUpdate: setSession,
+        onPlayerUpdate: setPlayers,
+      })
+
+      return () => multiplayerService.unsubscribe(session.id)
+    }
+  }, [session?.id])
+
+  const createGame = async () => {
+    if (!user) return
+    
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const { session: newSession } = await multiplayerService.createGameSession(user.id, {
+        game_mode: 'multiplayer',
+        categories: ['country', 'city', 'state'],
+        continents: [],
+        timer_enabled: false,
+        timer_limit_sec: 300
+      })
+      
+      setSession(newSession)
+      setMode('join') // Switch to join mode to show room code
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create game')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const joinGame = async () => {
+    if (!user || !roomCode.trim()) return
+    
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const gameSession = await multiplayerService.joinGameSession(roomCode.trim().toUpperCase(), user.id)
+      setSession(gameSession)
+      
+      // Load players
+      const gamePlayers = await multiplayerService.getGamePlayers(gameSession.id)
+      setPlayers(gamePlayers)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join game')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const setReady = async (isReady: boolean) => {
+    if (!user || !session) return
+    
+    try {
+      await multiplayerService.setPlayerReady(session.id, user.id, isReady)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update ready status')
+    }
+  }
+
+  const startGame = async () => {
+    if (!session) return
+    
+    try {
+      await multiplayerService.startGame(session.id)
+      onGameStart(session.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start game')
+    }
+  }
+
+  const currentUserPlayer = players.find(p => p.user_id === user?.id)
+  const allPlayersReady = players.length >= 2 && players.every(p => p.is_ready)
+  const canStart = session?.status === 'waiting' && allPlayersReady && currentUserPlayer?.player_index === 0
+
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6 px-4 py-10">
+      <header className="text-center">
+        <h1 className="atlas-glow text-4xl font-semibold tracking-tight text-white drop-shadow-lg md:text-5xl">
+          Multiplayer
+        </h1>
+        <p className="mt-2 text-sm text-cyan-100/80">
+          Challenge friends to a geography battle
+        </p>
+      </header>
+
+      {!session ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2 rounded-lg bg-white/5 p-1">
+            <button
+              onClick={() => { playClick(); setMode('create') }}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                mode === 'create'
+                  ? 'bg-white/20 text-white'
+                  : 'text-cyan-100/70 hover:text-white'
+              }`}
+            >
+              Create Game
+            </button>
+            <button
+              onClick={() => { playClick(); setMode('join') }}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                mode === 'join'
+                  ? 'bg-white/20 text-white'
+                  : 'text-cyan-100/70 hover:text-white'
+              }`}
+            >
+              Join Game
+            </button>
+          </div>
+
+          {mode === 'create' ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg bg-white/5 p-6 text-center">
+                <p className="text-cyan-100/80 mb-4">Create a new game room and share the code with friends</p>
+                <button
+                  onClick={createGame}
+                  disabled={loading || !user}
+                  className="w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
+                >
+                  {loading ? 'Creating...' : 'Create Game Room'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg bg-white/5 p-6">
+                <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                  Room Code
+                </label>
+                <input
+                  type="text"
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  placeholder="Enter 6-character code"
+                  className="w-full rounded-lg bg-white/10 px-4 py-3 text-center text-lg font-mono text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                  maxLength={6}
+                />
+                <button
+                  onClick={joinGame}
+                  disabled={loading || !roomCode.trim() || !user}
+                  className="mt-4 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
+                >
+                  {loading ? 'Joining...' : 'Join Game'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
+          {!user && (
+            <div className="rounded-lg bg-yellow-500/20 border border-yellow-500/30 px-4 py-3 text-sm text-yellow-200">
+              Please sign in to play multiplayer
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-lg bg-white/5 p-6">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-white mb-2">Game Room</h2>
+              <div className="text-3xl font-mono text-cyan-300">{session.room_code}</div>
+              <p className="text-sm text-cyan-100/60 mt-2">Share this code with friends</p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-cyan-100/80">Players ({players.length}/2)</h3>
+              {players.map((player) => (
+                <div
+                  key={player.id}
+                  className={`flex items-center justify-between rounded-lg p-3 ${
+                    player.user_id === user?.id ? 'bg-white/10' : 'bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-white text-sm font-semibold">
+                      {player.player_index + 1}
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">
+                        {player.user_id === user?.id ? 'You' : `Player ${player.player_index + 1}`}
+                      </div>
+                      <div className="text-xs text-cyan-100/60">
+                        {player.is_ready ? 'Ready' : 'Not ready'} • {player.is_online ? 'Online' : 'Offline'}
+                      </div>
+                    </div>
+                  </div>
+                  {player.user_id === user?.id && (
+                    <button
+                      onClick={() => setReady(!player.is_ready)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                        player.is_ready
+                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                          : 'bg-white/10 text-cyan-100/80 border border-white/20 hover:bg-white/15'
+                      }`}
+                    >
+                      {player.is_ready ? 'Ready' : 'Ready?'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { playClick(); onBack() }}
+              className="flex-1 rounded-full border border-white/20 bg-white/5 px-6 py-3 font-semibold text-cyan-100/90 transition hover:bg-white/10"
+            >
+              Leave Room
+            </button>
+            {canStart && (
+              <button
+                onClick={startGame}
+                className="flex-1 rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600"
+              >
+                Start Game
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

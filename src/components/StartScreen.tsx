@@ -19,6 +19,7 @@ interface StartScreenProps {
   onTimerLimit: (sec: number) => void
   onStart: () => void
   onOpenAtlas: () => void
+  onMultiplayer?: () => void
 }
 
 export function StartScreen({
@@ -35,6 +36,7 @@ export function StartScreen({
   onTimerLimit,
   onStart,
   onOpenAtlas,
+  onMultiplayer,
 }: StartScreenProps) {
   const canStart = categories.size > 0 && !loading
 
@@ -106,14 +108,15 @@ export function StartScreen({
             [
               ['solo', 'You vs bot'],
               ['two', 'Two players'],
+              ['multiplayer', 'Online multiplayer'],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
-              onClick={() => onMode(id)}
+              onClick={() => id === 'multiplayer' && onMultiplayer ? onMultiplayer() : onMode(id as 'solo' | 'two')}
               className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-                mode === id
+                (id === 'multiplayer' ? false : mode === id)
                   ? 'border-cyan-400/60 bg-cyan-500/20 text-white shadow-[0_0_24px_rgba(34,211,238,0.25)]'
                   : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
               }`}

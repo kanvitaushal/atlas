@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { AtlasView } from './components/AtlasView'
 import { BugHelpModal } from './components/BugHelpModal'
 import { GameView } from './components/GameView'
+import { MultiplayerLobby } from './components/MultiplayerLobby'
+import { MultiplayerGameView } from './components/MultiplayerGameView'
 import { StartScreen } from './components/StartScreen'
 import { DEFAULT_TIMER_SEC } from './constants'
 import { loadDataset } from './lib/loadData'
@@ -9,7 +11,7 @@ import { PlaceIndex } from './lib/placeIndex'
 import { playClick } from './lib/sounds'
 import type { ContinentCode, PlaceCategory } from './types/geo'
 
-type Phase = 'menu' | 'loading' | 'play' | 'atlas'
+type Phase = 'menu' | 'loading' | 'play' | 'atlas' | 'multiplayer-lobby' | 'multiplayer-game' | 'game-over'
 
 const defaultCategories = new Set<PlaceCategory>([
   'country',
@@ -31,6 +33,8 @@ export default function App() {
   const [index, setIndex] = useState<PlaceIndex | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [bugHelpOpen, setBugHelpOpen] = useState(false)
+  const [multiplayerSessionId, setMultiplayerSessionId] = useState<string | null>(null)
+  const [finalScores, setFinalScores] = useState<Record<string, number> | null>(null)
 
   const toggleCategory = useCallback((c: PlaceCategory) => {
     setCategories((prev) => {
@@ -63,6 +67,36 @@ export default function App() {
     }
   }, [categories])
 
+  const startMultiplayerGame = useCallback(async () => {
+    setLoadError(null)
+    setPhase('loading')
+    try {
+      const records = await loadDataset(categories)
+      setIndex(new PlaceIndex(records))
+      setPhase('multiplayer-lobby')
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Could not load data.')
+      setPhase('menu')
+    }
+  }, [categories])
+
+  const handleMultiplayerGameStart = useCallback((sessionId: string) => {
+    setMultiplayerSessionId(sessionId)
+    setPhase('multiplayer-game')
+  }, [])
+
+  const handleMultiplayerGameEnd = useCallback((scores: Record<string, number>) => {
+    setFinalScores(scores)
+    setPhase('game-over')
+  }, [])
+
+  const handleBackToMenu = useCallback(() => {
+    setPhase('menu')
+    setIndex(null)
+    setMultiplayerSessionId(null)
+    setFinalScores(null)
+  }, [])
+
   return (
     <div className="atlas-root flex min-h-screen flex-col font-sans">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -87,6 +121,7 @@ export default function App() {
             onTimerLimit={setTimerLimitSec}
             onStart={startGame}
             onOpenAtlas={() => setPhase('atlas')}
+            onMultiplayer={startMultiplayerGame}
           />
         )}
         {phase === 'loading' && (
@@ -122,6 +157,55 @@ export default function App() {
         )}
         {phase === 'atlas' && (
           <AtlasView onBack={() => setPhase('menu')} />
+        )}
+        {phase === 'multiplayer-lobby' && (
+          <MultiplayerLobby
+            onGameStart={handleMultiplayerGameStart}
+            onBack={handleBackToMenu}
+          />
+        )}
+        {phase === 'multiplayer-game' && multiplayerSessionId && index && (
+          <MultiplayerGameView
+            sessionId={multiplayerSessionId}
+            index={index}
+            onLeave={handleBackToMenu}
+            onGameEnd={handleMultiplayerGameEnd}
+          />
+        )}
+        {phase === 'game-over' && finalScores && (
+          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6 px-4 py-10">
+            <div className="text-center">
+              <h1 className="atlas-glow text-4xl font-semibold tracking-tight text-white drop-shadow-lg md:text-5xl">
+                Game Over!
+              </h1>
+              <div className="mt-8 space-y-4">
+                {Object.entries(finalScores)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([userId, score], index) => (
+                    <div
+                      key={userId}
+                      className="flex items-center justify-between rounded-lg bg-white/5 px-6 py-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 text-white font-bold">
+                          {index + 1}
+                        </div>
+                        <span className="text-white font-medium">
+                          {userId === 'current-user' ? 'You' : `Player ${index + 1}`}
+                        </span>
+                      </div>
+                      <span className="text-cyan-300 font-semibold">{score} pts</span>
+                    </div>
+                  ))}
+              </div>
+              <button
+                onClick={handleBackToMenu}
+                className="mt-8 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600"
+              >
+                Back to Menu
+              </button>
+            </div>
+          </div>
         )}
         {loadError && (
           <p className="mx-auto max-w-lg px-4 pb-6 text-center text-sm text-red-300/90">
