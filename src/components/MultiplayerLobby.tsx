@@ -21,12 +21,28 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
 
   useEffect(() => {
     if (session) {
+      console.log('MultiplayerLobby: Setting up subscription for session', session.id)
       multiplayerService.subscribeToGameSession(session.id, {
-        onSessionUpdate: setSession,
-        onPlayerUpdate: setPlayers,
+        onSessionUpdate: (updatedSession) => {
+          console.log('MultiplayerLobby: Session updated', updatedSession)
+          setSession(updatedSession)
+        },
+        onPlayerUpdate: (updatedPlayers) => {
+          console.log('MultiplayerLobby: Players updated', updatedPlayers)
+          setPlayers(updatedPlayers)
+        },
       })
 
-      return () => multiplayerService.unsubscribe(session.id)
+      // Load initial players
+      multiplayerService.getGamePlayers(session.id).then(players => {
+        console.log('MultiplayerLobby: Initial players loaded', players)
+        setPlayers(players)
+      })
+
+      return () => {
+        console.log('MultiplayerLobby: Unsubscribing from session', session.id)
+        multiplayerService.unsubscribe(session.id)
+      }
     }
   }, [session?.id])
 
@@ -57,17 +73,21 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   const joinGame = async () => {
     if (!user || !roomCode.trim()) return
     
+    console.log('MultiplayerLobby: Joining game with room code:', roomCode.trim().toUpperCase())
     setLoading(true)
     setError(null)
     
     try {
       const gameSession = await multiplayerService.joinGameSession(roomCode.trim().toUpperCase(), user.id)
+      console.log('MultiplayerLobby: Successfully joined session:', gameSession)
       setSession(gameSession)
       
       // Load players
       const gamePlayers = await multiplayerService.getGamePlayers(gameSession.id)
+      console.log('MultiplayerLobby: Loaded players after joining:', gamePlayers)
       setPlayers(gamePlayers)
     } catch (err) {
+      console.error('MultiplayerLobby: Failed to join game:', err)
       setError(err instanceof Error ? err.message : 'Failed to join game')
     } finally {
       setLoading(false)
