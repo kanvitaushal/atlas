@@ -115,7 +115,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     const answer = input.trim()
     console.log('MultiplayerGameView: Processing answer', answer)
     
-    // Use same logic as single-player
+    // Use same logic as single-player tryCommitPlace
     const place = index.resolve(answer, new Set(session.categories as PlaceCategory[]))
     if (!place) {
       console.log('MultiplayerGameView: Place not found', answer)
@@ -145,6 +145,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
       return
     }
 
+    // MULTIPLAYER ADAPTATION: Update shared state instead of local state
     try {
       console.log('MultiplayerGameView: Submitting move', { 
         sessionId, 
@@ -154,7 +155,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         place 
       })
       
-      // Submit the move
+      // Submit move to shared state
       await multiplayerService.makeMove(
         sessionId,
         user.id,
@@ -175,6 +176,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
 
       console.log('MultiplayerGameView: Turn updated successfully')
       
+      // Single-player success feedback
       playValid()
       setInput('')
       setError(null)
@@ -257,7 +259,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
       <div className="border-b border-white/10 bg-white/5 px-4 py-3">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="text-xs uppercase tracking-widest text-cyan-100/60">
+            <div className="text-xs uppercase tracking-widest text-slate-400">
               Room: <span className="font-mono text-cyan-300">{session.room_name}</span>
               <span className="text-cyan-100/40 ml-2">({session.room_code})</span>
             </div>
@@ -309,6 +311,10 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
                   <button
                     type="submit"
                     disabled={!input.trim()}
+                    onClick={(e) => {
+                      console.log('SUBMIT BUTTON CLICKED DIRECTLY!')
+                      console.log('Current state:', { input, isMyTurn, currentPlayer })
+                    }}
                     className="rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
                   >
                     Submit
