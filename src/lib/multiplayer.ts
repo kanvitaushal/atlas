@@ -281,6 +281,8 @@ class MultiplayerService {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
 
+    console.log('MultiplayerService: makeMove called', { sessionId, playerId, playerIndex, moveText, isValid, points })
+
     // Get current move count
     const { data: existingMoves } = await supabase
       .from('game_moves')
@@ -290,6 +292,7 @@ class MultiplayerService {
       .limit(1)
 
     const moveNumber = (existingMoves?.[0]?.move_number || 0) + 1
+    console.log('MultiplayerService: Move number calculated', moveNumber)
 
     // Insert move
     const { error: moveError } = await supabase
@@ -305,7 +308,12 @@ class MultiplayerService {
         move_number: moveNumber
       })
 
-    if (moveError) throw moveError
+    if (moveError) {
+      console.error('MultiplayerService: Failed to insert move', moveError)
+      throw moveError
+    }
+
+    console.log('MultiplayerService: Move inserted successfully')
 
     // Update game session
     const { data: session } = await supabase
@@ -318,14 +326,18 @@ class MultiplayerService {
       const newChain = [...(session.current_chain || []), moveText]
       const newScores = { ...(session.scores || {}), [playerId]: ((session.scores || {})[playerId] || 0) + points }
 
+      console.log('MultiplayerService: Updating session', { newChain, newScores })
+
       await supabase
         .from('game_sessions')
         .update({
           current_chain: newChain,
-          scores: newScores,
-          current_turn_index: (playerIndex + 1) % 2 // Assuming 2 players for now
+          scores: newScores
+          // NOTE: Turn update handled by updateCurrentTurn() function
         })
         .eq('id', sessionId)
+
+      console.log('MultiplayerService: Session updated successfully')
     }
   }
 
