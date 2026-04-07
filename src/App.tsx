@@ -112,18 +112,8 @@ function AppContent() {
 
       <header className="relative z-10 border-b border-white/10 bg-white/5 px-4 py-3">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            {phase !== 'menu' && (
-              <button
-                onClick={() => { playClick(); handleBackToMenu() }}
-                className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-cyan-100/80 transition hover:bg-white/10"
-              >
-                ← Back
-              </button>
-            )}
-            <div className="text-lg font-semibold text-white">
-              Atlas
-            </div>
+          <div className="text-lg font-semibold text-white">
+            Atlas
           </div>
           <div className="flex items-center gap-3">
             {user ? (

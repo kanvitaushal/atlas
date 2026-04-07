@@ -109,12 +109,10 @@ export function LoginModal({ open, onClose, onLoggedIn }: LoginModalProps) {
         className="glass w-full max-w-sm rounded-3xl border border-white/12 p-6 shadow-2xl"
       >
         <h2 id="login-title" className="text-lg font-semibold text-white">
-          Report an issue
+          {mode === 'signin' ? 'Sign In' : 'Sign Up'}
         </h2>
         <p className="mt-2 text-xs leading-relaxed text-slate-400">
-          Playing Atlas does <strong className="text-slate-300">not</strong> require an account.
-          Sign in (or create one) only so glitch reports are stored with your user id in the
-          database.
+          {mode === 'signin' ? 'Sign in to save your scores and play multiplayer.' : 'Create an account to save your scores and play multiplayer.'}
         </p>
 
         {!supabaseConfigured && (
