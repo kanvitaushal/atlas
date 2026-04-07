@@ -45,14 +45,15 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         console.log('MultiplayerGameView: Game session loaded', gameSession)
         setSession(gameSession)
         setCurrentTurn(gameSession.current_turn_index)
+        console.log('MultiplayerGameView: Set currentTurn from session', gameSession.current_turn_index)
         
-        // Load players and moves
+        // Load initial players and moves
         const [gamePlayers, gameMoves] = await Promise.all([
           multiplayerService.getGamePlayers(sessionId),
           multiplayerService.getGameMoves(sessionId)
         ])
-
-        console.log('MultiplayerGameView: Players and moves loaded', { gamePlayers, gameMoves })
+        
+        console.log('MultiplayerGameView: Initial data loaded', { gamePlayers, gameMoves })
         setPlayers(gamePlayers)
         setMoves(gameMoves)
         setLoading(false)
@@ -62,7 +63,6 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         setLoading(false)
       }
     }
-
     loadGameData()
   }, [sessionId])
 
@@ -70,10 +70,12 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     if (session) {
       console.log('MultiplayerGameView: Setting up subscription for session', session.id)
       
-      const channel = multiplayerService.subscribeToGameSession(session.id, {
+      multiplayerService.subscribeToGameSession(sessionId, {
         onSessionUpdate: (newSession) => {
           console.log('MultiplayerGameView: Session update received', newSession)
           setSession(newSession)
+          console.log('MultiplayerGameView: current_turn_index from session:', newSession.current_turn_index)
+          console.log('MultiplayerGameView: Setting currentTurn from session update:', newSession.current_turn_index)
           setCurrentTurn(newSession.current_turn_index)
           
           if (newSession.status === 'finished') {
@@ -90,7 +92,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         }
       })
 
-      console.log('MultiplayerGameView: Subscription active, channel status:', channel)
+      console.log('MultiplayerGameView: Subscription active, channel status:')
 
       // FALLBACK POLLING: Ensure moves sync even if subscription fails
       const pollInterval = setInterval(async () => {
