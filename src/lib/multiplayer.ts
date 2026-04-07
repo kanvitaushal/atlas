@@ -382,8 +382,8 @@ class MultiplayerService {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
 
-    console.log('MultiplayerService: Updating current turn', { sessionId, playerIndex })
-
+    console.log('MultiplayerService: Updating current turn DYNAMICALLY', { sessionId, playerIndex, totalPlayers: 'dynamic' })
+    
     const { error } = await supabase
       .from('game_sessions')
       .update({ current_turn_index: playerIndex })
@@ -394,7 +394,7 @@ class MultiplayerService {
       throw error
     }
 
-    console.log('MultiplayerService: Turn updated successfully')
+    console.log('MultiplayerService: Turn updated successfully in database', { sessionId, newTurnIndex: playerIndex })
   }
 
   async getGameSession(roomCode: string): Promise<GameSession | null> {
