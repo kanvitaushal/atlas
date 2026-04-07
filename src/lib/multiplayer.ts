@@ -140,6 +140,8 @@ class MultiplayerService {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
 
+    console.log('Setting up subscription for session:', sessionId)
+
     const channel = supabase
       .channel(`game-${sessionId}`)
       .on(
@@ -151,6 +153,7 @@ class MultiplayerService {
           filter: `id=eq.${sessionId}`
         },
         (payload) => {
+          console.log('Session update:', payload)
           if (payload.new && callbacks.onSessionUpdate) {
             callbacks.onSessionUpdate(payload.new as GameSession)
           }
@@ -165,6 +168,7 @@ class MultiplayerService {
           filter: `game_session_id=eq.${sessionId}`
         },
         async (payload) => {
+          console.log('Player update:', payload)
           if (callbacks.onPlayerUpdate) {
             // Always fetch fresh data when there's a change
             const { data } = await supabase
@@ -184,7 +188,8 @@ class MultiplayerService {
           table: 'game_moves',
           filter: `game_session_id=eq.${sessionId}`
         },
-        async () => {
+        async (payload) => {
+          console.log('Move update:', payload)
           if (callbacks.onMoveUpdate) {
             const { data } = await supabase
               .from('game_moves')
@@ -195,7 +200,9 @@ class MultiplayerService {
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Subscription status:', status)
+      })
 
     this.channels.set(sessionId, channel)
     return channel
