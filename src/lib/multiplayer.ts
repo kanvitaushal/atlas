@@ -164,8 +164,9 @@ class MultiplayerService {
           table: 'game_players',
           filter: `game_session_id=eq.${sessionId}`
         },
-        async () => {
+        async (payload) => {
           if (callbacks.onPlayerUpdate) {
+            // Always fetch fresh data when there's a change
             const { data } = await supabase
               .from('game_players')
               .select('*')

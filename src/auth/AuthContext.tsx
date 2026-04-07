@@ -9,7 +9,12 @@ import {
 } from 'react'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
-export type BugReporterUser = { id: string; email: string }
+export interface BugReporterUser {
+  id: string
+  email: string
+  name?: string
+  country?: string
+}
 
 type AuthContextValue = {
   user: BugReporterUser | null
@@ -23,9 +28,9 @@ type AuthContextValue = {
   signUp: (
     email: string,
     password: string,
-  ) => Promise<
-    { ok: true; needsEmailConfirmation: boolean } | { ok: false; error: string }
-  >
+    name?: string,
+    country?: string,
+  ) => Promise<{ ok: true; needsEmailConfirmation?: boolean } | { ok: false; error: string }>
   logout: () => Promise<void>
 }
 
@@ -86,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signUp = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, name?: string, country?: string) => {
       const sb = getSupabase()
       if (!sb) {
         return {
@@ -98,6 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          data: {
+            name: name?.trim(),
+            country: country?.trim(),
+          }
+        }
       })
       if (error) return { ok: false as const, error: error.message }
       const needsEmailConfirmation = !data.session

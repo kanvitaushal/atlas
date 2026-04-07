@@ -14,14 +14,18 @@ export function LoginModal({ open, onClose, onLoggedIn }: LoginModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [country, setCountry] = useState('')
+  const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
 
   useEffect(() => {
     if (!open) {
       setEmail('')
       setPassword('')
+      setName('')
+      setCountry('')
       setError(null)
       setInfo(null)
       setMode('signin')
@@ -66,7 +70,12 @@ export function LoginModal({ open, onClose, onLoggedIn }: LoginModalProps) {
         setPending(false)
         return
       }
-      const r = await signUp(email, password)
+      if (!name.trim() || !country.trim()) {
+        setError('Please fill in all fields')
+        setPending(false)
+        return
+      }
+      const r = await signUp(email, password, name.trim(), country.trim())
       if (!r.ok) {
         setError(r.error)
         setPending(false)
@@ -79,6 +88,8 @@ export function LoginModal({ open, onClose, onLoggedIn }: LoginModalProps) {
         )
         setMode('signin')
         setPassword('')
+        setName('')
+        setCountry('')
         setPending(false)
         return
       }
@@ -163,6 +174,78 @@ export function LoginModal({ open, onClose, onLoggedIn }: LoginModalProps) {
           className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:opacity-50"
           required
         />
+        
+        {mode === 'signup' && (
+          <>
+            <label className="mt-3 block text-xs uppercase tracking-wider text-slate-500">
+              Name
+            </label>
+            <input
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={!ready}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:opacity-50"
+              required
+            />
+            
+            <label className="mt-3 block text-xs uppercase tracking-wider text-slate-500">
+              Country
+            </label>
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              disabled={!ready}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:opacity-50"
+              required
+            >
+              <option value="">Select a country</option>
+              <option value="US">United States</option>
+              <option value="UK">United Kingdom</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+              <option value="IN">India</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="JP">Japan</option>
+              <option value="BR">Brazil</option>
+              <option value="MX">Mexico</option>
+              <option value="ES">Spain</option>
+              <option value="IT">Italy</option>
+              <option value="NL">Netherlands</option>
+              <option value="SE">Sweden</option>
+              <option value="NO">Norway</option>
+              <option value="DK">Denmark</option>
+              <option value="FI">Finland</option>
+              <option value="CH">Switzerland</option>
+              <option value="AT">Austria</option>
+              <option value="BE">Belgium</option>
+              <option value="IE">Ireland</option>
+              <option value="PT">Portugal</option>
+              <option value="GR">Greece</option>
+              <option value="TR">Turkey</option>
+              <option value="IL">Israel</option>
+              <option value="AE">United Arab Emirates</option>
+              <option value="SA">Saudi Arabia</option>
+              <option value="EG">Egypt</option>
+              <option value="ZA">South Africa</option>
+              <option value="NG">Nigeria</option>
+              <option value="KE">Kenya</option>
+              <option value="RU">Russia</option>
+              <option value="CN">China</option>
+              <option value="KR">South Korea</option>
+              <option value="SG">Singapore</option>
+              <option value="MY">Malaysia</option>
+              <option value="TH">Thailand</option>
+              <option value="PH">Philippines</option>
+              <option value="ID">Indonesia</option>
+              <option value="NZ">New Zealand</option>
+              <option value="Other">Other</option>
+            </select>
+          </>
+        )}
+        
         <label className="mt-3 block text-xs uppercase tracking-wider text-slate-500">
           Password
         </label>
