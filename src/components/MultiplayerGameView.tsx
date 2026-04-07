@@ -91,10 +91,18 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('=== SUBMIT BUTTON DEBUG ===')
     console.log('MultiplayerGameView: Submit button clicked', { input, isMyTurn, currentPlayer })
+    console.log('MultiplayerGameView: User check', { user: !!user, userId: user?.id })
+    console.log('MultiplayerGameView: Session check', { session: !!session, sessionId })
+    console.log('MultiplayerGameView: Players array', players)
+    console.log('MultiplayerGameView: Current turn', currentTurn)
+    console.log('MultiplayerGameView: Current player object', currentPlayer)
+    console.log('MultiplayerGameView: isMyTurn calculation', currentPlayer?.player_index, currentTurn, currentPlayer?.player_index === currentTurn)
     
     if (!user || !currentPlayer || !isMyTurn || !input.trim() || !session) {
-      console.log('MultiplayerGameView: Submit validation failed', { 
+      console.log('MultiplayerGameView: Submit validation FAILED', { 
         hasUser: !!user, 
         hasCurrentPlayer: !!currentPlayer, 
         isMyTurn, 
@@ -107,7 +115,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     const answer = input.trim()
     console.log('MultiplayerGameView: Processing answer', answer)
     
-    // Use the same logic as single-player
+    // Use same logic as single-player
     const place = index.resolve(answer, new Set(session.categories as PlaceCategory[]))
     if (!place) {
       console.log('MultiplayerGameView: Place not found', answer)
