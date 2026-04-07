@@ -18,6 +18,7 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [playerNames, setPlayerNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (session) {
@@ -113,16 +114,6 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
     }
   }
 
-  const setReady = async (isReady: boolean) => {
-    if (!user || !session) return
-    
-    try {
-      await multiplayerService.setPlayerReady(session.id, user.id, isReady)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update ready status')
-    }
-  }
-
   const startGame = async () => {
     if (!session) return
     
@@ -135,8 +126,7 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   }
 
   const currentUserPlayer = players.find(p => p.user_id === user?.id)
-  const allPlayersReady = players.length >= 2 && players.every(p => p.is_ready)
-  const canStart = session?.status === 'waiting' && allPlayersReady && currentUserPlayer?.player_index === 0
+  const canStart = session?.status === 'waiting' && players.length >= 2 && currentUserPlayer?.player_index === 0
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6 px-4 py-10">
@@ -252,27 +242,28 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-white text-sm font-semibold">
                       {player.player_index + 1}
                     </div>
-                    <div>
-                      <div className="text-white font-medium">
-                        {player.user_id === user?.id ? 'You' : `Player ${player.player_index + 1}`}
-                      </div>
-                      <div className="text-xs text-cyan-100/60">
-                        {player.is_ready ? 'Ready' : 'Not ready'} • {player.is_online ? 'Online' : 'Offline'}
-                      </div>
+                    <div className="flex-1">
+                      {player.user_id === user?.id ? (
+                        <input
+                          type="text"
+                          value={playerNames[player.id] || ''}
+                          onChange={(e) => setPlayerNames(prev => ({ ...prev, [player.id]: e.target.value }))}
+                          placeholder="Enter your name"
+                          className="w-full rounded-lg bg-white/10 px-3 py-1 text-sm text-white placeholder-cyan-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                          maxLength={20}
+                        />
+                      ) : (
+                        <div>
+                          <div className="text-white font-medium">
+                            {playerNames[player.id] || `Player ${player.player_index + 1}`}
+                          </div>
+                          <div className="text-xs text-cyan-100/60">
+                            Online
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {player.user_id === user?.id && (
-                    <button
-                      onClick={() => setReady(!player.is_ready)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                        player.is_ready
-                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                          : 'bg-white/10 text-cyan-100/80 border border-white/20 hover:bg-white/15'
-                      }`}
-                    >
-                      {player.is_ready ? 'Ready' : 'Ready?'}
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
