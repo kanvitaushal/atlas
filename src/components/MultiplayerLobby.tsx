@@ -15,6 +15,8 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   const [roomCode, setRoomCode] = useState('')
   const [roomName, setRoomName] = useState('')
   const [playerName, setPlayerName] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(['country'])) // Default to country
+  const [turnTimeLimit, setTurnTimeLimit] = useState<number>(30) // Default 30 seconds
   const [session, setSession] = useState<GameSession | null>(null)
   const [players, setPlayers] = useState<GamePlayer[]>([])
   const [loading, setLoading] = useState(false)
@@ -86,7 +88,12 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
       return
     }
     
-    console.log('MultiplayerLobby: Creating game', { roomName, playerName })
+    if (selectedCategories.size === 0) {
+      setError('Please select at least one category')
+      return
+    }
+    
+    console.log('MultiplayerLobby: Creating game', { roomName, playerName, categories: Array.from(selectedCategories), turnTimeLimit })
     setLoading(true)
     setError(null)
     
@@ -97,10 +104,10 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
         roomName.trim(),
         {
           game_mode: 'multiplayer',
-          categories: ['country', 'city', 'state'],
+          categories: Array.from(selectedCategories),
           continents: [],
-          timer_enabled: false,
-          timer_limit_sec: 300
+          timer_enabled: turnTimeLimit > 0,
+          timer_limit_sec: turnTimeLimit
         }
       )
       
@@ -238,11 +245,55 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
                       maxLength={20}
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Categories
+                    </label>
+                    <div className="space-y-2">
+                      {['country', 'city', 'state', 'territory', 'island'].map((category) => (
+                        <label key={category} className="flex items-center gap-2 text-cyan-100/80">
+                          <input
+                            type="checkbox"
+                            checked={selectedCategories.has(category)}
+                            onChange={(e) => {
+                              const newCategories = new Set(selectedCategories)
+                              if (e.target.checked) {
+                                newCategories.add(category)
+                              } else {
+                                newCategories.delete(category)
+                              }
+                              setSelectedCategories(newCategories)
+                            }}
+                            className="rounded border-white/20 bg-white/10 text-cyan-400 focus:ring-cyan-400"
+                          />
+                          <span className="capitalize">{category}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-100/80 mb-2">
+                      Turn Time Limit
+                    </label>
+                    <select
+                      value={turnTimeLimit}
+                      onChange={(e) => setTurnTimeLimit(Number(e.target.value))}
+                      className="w-full rounded-lg bg-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    >
+                      <option value={0}>No time limit</option>
+                      <option value={10}>10 seconds</option>
+                      <option value={20}>20 seconds</option>
+                      <option value={30}>30 seconds</option>
+                      <option value={60}>60 seconds</option>
+                    </select>
+                  </div>
                 </div>
 
                 <button
                   onClick={createGame}
-                  disabled={loading || !user || !roomName.trim() || !playerName.trim()}
+                  disabled={loading || !user || !roomName.trim() || !playerName.trim() || selectedCategories.size === 0}
                   className="mt-6 w-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-6 py-3 font-semibold text-white transition hover:from-cyan-600 hover:to-emerald-600 disabled:opacity-50"
                 >
                   {loading ? 'Creating...' : 'Create Game Room'}

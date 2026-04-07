@@ -346,12 +346,38 @@ class MultiplayerService {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase not configured')
 
+    console.log('MultiplayerService: Starting game', sessionId)
+
     const { error } = await supabase
       .from('game_sessions')
       .update({ status: 'playing' })
       .eq('id', sessionId)
 
-    if (error) throw error
+    if (error) {
+      console.error('MultiplayerService: Failed to start game', error)
+      throw error
+    }
+
+    console.log('MultiplayerService: Game started successfully')
+  }
+
+  async updateCurrentTurn(sessionId: string, playerIndex: number): Promise<void> {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase not configured')
+
+    console.log('MultiplayerService: Updating current turn', { sessionId, playerIndex })
+
+    const { error } = await supabase
+      .from('game_sessions')
+      .update({ current_turn_index: playerIndex })
+      .eq('id', sessionId)
+
+    if (error) {
+      console.error('MultiplayerService: Failed to update turn', error)
+      throw error
+    }
+
+    console.log('MultiplayerService: Turn updated successfully')
   }
 
   async getGameSession(roomCode: string): Promise<GameSession | null> {
