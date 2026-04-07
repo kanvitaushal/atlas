@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { LoginModal } from './LoginModal'
 import { multiplayerService, type GameSession, type GamePlayer } from '../lib/multiplayer'
 import { playClick } from '../lib/sounds'
 
@@ -16,6 +17,7 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
   const [players, setPlayers] = useState<GamePlayer[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
     if (session) {
@@ -179,7 +181,13 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
 
           {!user && (
             <div className="rounded-lg bg-yellow-500/20 border border-yellow-500/30 px-4 py-3 text-sm text-yellow-200">
-              Please sign in to play multiplayer
+              <p className="mb-3">Please sign in to play multiplayer</p>
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="w-full rounded-full bg-yellow-500/30 px-4 py-2 text-sm font-medium text-yellow-100 transition hover:bg-yellow-500/40"
+              >
+                Sign In
+              </button>
             </div>
           )}
         </div>
@@ -255,6 +263,11 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
           )}
         </div>
       )}
+      
+      <LoginModal 
+        open={loginModalOpen} 
+        onClose={() => setLoginModalOpen(false)} 
+      />
     </div>
   )
 }

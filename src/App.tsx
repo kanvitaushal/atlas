@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react'
+import { useAuth } from './auth/AuthContext'
 import { AtlasView } from './components/AtlasView'
 import { BugHelpModal } from './components/BugHelpModal'
 import { GameView } from './components/GameView'
 import { MultiplayerLobby } from './components/MultiplayerLobby'
 import { MultiplayerGameView } from './components/MultiplayerGameView'
 import { StartScreen } from './components/StartScreen'
+import { LoginModal } from './components/LoginModal'
 import { DEFAULT_TIMER_SEC } from './constants'
 import { loadDataset } from './lib/loadData'
 import { PlaceIndex } from './lib/placeIndex'
@@ -21,7 +23,8 @@ const defaultCategories = new Set<PlaceCategory>([
   'island',
 ])
 
-export default function App() {
+function AppContent() {
+  const { user, logout } = useAuth()
   const [phase, setPhase] = useState<Phase>('menu')
   const [categories, setCategories] = useState<Set<PlaceCategory>>(
     () => new Set(defaultCategories),
@@ -35,6 +38,7 @@ export default function App() {
   const [bugHelpOpen, setBugHelpOpen] = useState(false)
   const [multiplayerSessionId, setMultiplayerSessionId] = useState<string | null>(null)
   const [finalScores, setFinalScores] = useState<Record<string, number> | null>(null)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   const toggleCategory = useCallback((c: PlaceCategory) => {
     setCategories((prev) => {
@@ -104,6 +108,36 @@ export default function App() {
         <div className="absolute -right-20 bottom-32 h-80 w-80 rounded-full bg-emerald-500/20 blur-[90px]" />
         <div className="absolute left-1/2 top-1/2 h-[min(80vw,28rem)] w-[min(80vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-500/10 blur-[120px]" />
       </div>
+
+      <header className="relative z-10 border-b border-white/10 bg-white/5 px-4 py-3">
+        <div className="mx-auto flex max-w-4xl items-center justify-between">
+          <div className="text-lg font-semibold text-white">
+            Atlas
+          </div>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-cyan-100/80">
+                  {user.email}
+                </span>
+                <button
+                  onClick={() => { playClick(); logout() }}
+                  className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-cyan-100/80 transition hover:bg-white/10"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { playClick(); setLoginModalOpen(true) }}
+                className="rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:from-cyan-600 hover:to-emerald-600"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
 
       <main className="relative z-10 flex flex-1 flex-col">
         {phase === 'menu' && (
@@ -230,6 +264,15 @@ export default function App() {
       </footer>
 
       <BugHelpModal open={bugHelpOpen} onClose={() => setBugHelpOpen(false)} />
+      <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
