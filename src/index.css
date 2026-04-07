@@ -1,0 +1,104 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.atlas-root {
+  background: linear-gradient(
+    165deg,
+    #0a1628 0%,
+    #0c1e35 35%,
+    #0a2528 65%,
+    #061a1c 100%
+  );
+  color: #e2e8f0;
+}
+
+.glass {
+  background: rgba(15, 35, 50, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.atlas-glow {
+  text-shadow:
+    0 0 40px rgba(34, 211, 238, 0.45),
+    0 0 80px rgba(52, 211, 153, 0.25);
+}
+
+.letter-pop {
+  animation: letter-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes letter-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-8deg);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+    filter: blur(0);
+  }
+}
+
+.shake {
+  animation: shake 0.45s ease both;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.answer-glow {
+  animation: answer-pulse 0.9s ease both;
+}
+
+@keyframes answer-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 32px 4px rgba(52, 211, 153, 0.35);
+  }
+  100% {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+}
+
+@keyframes confetti-fly {
+  to {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(720deg);
+    opacity: 0;
+  }
+}

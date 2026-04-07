@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-04-06T14:49:05.474Z",
+  "counts": {
+    "countriesAndTerritories": 250,
+    "states": 5296,
+    "cities": 11898,
+    "islands": 86
+  },
+  "continents": [
+    "AF",
+    "AN",
+    "AS",
+    "EU",
+    "NA",
+    "OC",
+    "SA"
+  ]
+}
