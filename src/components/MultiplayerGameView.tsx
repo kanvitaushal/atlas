@@ -91,17 +91,33 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !currentPlayer || !isMyTurn || !input.trim() || !session) return
+    console.log('MultiplayerGameView: Submit button clicked', { input, isMyTurn, currentPlayer })
+    
+    if (!user || !currentPlayer || !isMyTurn || !input.trim() || !session) {
+      console.log('MultiplayerGameView: Submit validation failed', { 
+        hasUser: !!user, 
+        hasCurrentPlayer: !!currentPlayer, 
+        isMyTurn, 
+        hasInput: !!input.trim(), 
+        hasSession: !!session 
+      })
+      return
+    }
 
     const answer = input.trim()
+    console.log('MultiplayerGameView: Processing answer', answer)
+    
     // Find the place record for the answer
     const place = index.resolve(answer, new Set(session.categories as PlaceCategory[]))
     if (!place) {
+      console.log('MultiplayerGameView: Place not found', answer)
       playInvalid()
       setError('Place not found')
       setTimeout(() => setError(null), 3000)
       return
     }
+
+    console.log('MultiplayerGameView: Place found', place)
 
     const validation = validateAnswer(
       place,
@@ -111,7 +127,10 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
       new Set(moves.map(m => m.place_data?.id).filter(Boolean))
     )
     
+    console.log('MultiplayerGameView: Validation result', validation)
+    
     if (!validation.ok) {
+      console.log('MultiplayerGameView: Validation failed', validation.reason)
       playInvalid()
       setError(validation.reason)
       setTimeout(() => setError(null), 3000)
@@ -119,6 +138,14 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     }
 
     try {
+      console.log('MultiplayerGameView: Submitting move', { 
+        sessionId, 
+        userId: user.id, 
+        playerIndex: currentPlayer.player_index, 
+        answer, 
+        place 
+      })
+      
       await multiplayerService.makeMove(
         sessionId,
         user.id,
@@ -129,13 +156,56 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         1 // points
       )
 
+      console.log('MultiplayerGameView: Move submitted successfully')
       playValid()
       setInput('')
       setError(null)
     } catch (err) {
+      console.error('MultiplayerGameView: Failed to submit move', err)
       setError(err instanceof Error ? err.message : 'Failed to submit move')
     }
   }, [user, currentPlayer, isMyTurn, input, sessionId, index, requiredLetter, moves])
+
+  const handlePassTurn = useCallback(async () => {
+    console.log('MultiplayerGameView: Pass turn button clicked', { isMyTurn, currentPlayer })
+    
+    if (!user || !currentPlayer || !isMyTurn || !session) {
+      console.log('MultiplayerGameView: Pass turn validation failed', { 
+        hasUser: !!user, 
+        hasCurrentPlayer: !!currentPlayer, 
+        isMyTurn, 
+        hasSession: !!session 
+      })
+      return
+    }
+
+    try {
+      console.log('MultiplayerGameView: Passing turn', { 
+        sessionId, 
+        userId: user.id, 
+        playerIndex: currentPlayer.player_index 
+      })
+      
+      // Create a pass move
+      await multiplayerService.makeMove(
+        sessionId,
+        user.id,
+        currentPlayer.player_index,
+        'PASS',
+        null,
+        true, // isValid
+        0 // 0 points for pass
+      )
+
+      console.log('MultiplayerGameView: Turn passed successfully')
+      playClick()
+      setInput('')
+      setError(null)
+    } catch (err) {
+      console.error('MultiplayerGameView: Failed to pass turn', err)
+      setError(err instanceof Error ? err.message : 'Failed to pass turn')
+    }
+  }, [user, currentPlayer, isMyTurn, sessionId])
 
   const handleLeave = () => {
     playClick()
@@ -164,7 +234,8 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="text-sm text-cyan-100/60">
-              Room: <span className="font-mono text-cyan-300">{session.room_code}</span>
+              Room: <span className="font-mono text-cyan-300">{session.room_name}</span>
+              <span className="text-cyan-100/40 ml-2">({session.room_code})</span>
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -179,7 +250,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
                   player.player_index === currentTurn ? 'bg-cyan-400' : 'bg-cyan-100/40'
                 }`} />
                 <span className="text-sm font-medium">
-                  {player.user_id === user?.id ? 'You' : `Player ${player.player_index + 1}`}
+                  {player.user_id === user?.id ? 'You' : player.player_name}
                 </span>
                 <span className="text-xs">
                   {session.scores[player.user_id] || 0} pts
@@ -218,6 +289,13 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
                   >
                     Submit
                   </button>
+                  <button
+                    type="button"
+                    onClick={handlePassTurn}
+                    className="rounded-full border border-white/20 bg-white/5 px-6 py-3 font-semibold text-cyan-100/90 transition hover:bg-white/10"
+                  >
+                    Pass Turn
+                  </button>
                 </form>
               </div>
             ) : (
@@ -225,7 +303,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
                 <h2 className="text-lg font-medium text-cyan-100/90">
                   {players.find(p => p.player_index === currentTurn)?.user_id === user?.id 
                     ? 'Your turn!' 
-                    : `Player ${currentTurn + 1}'s turn`
+                    : `${players.find(p => p.player_index === currentTurn)?.player_name || `Player ${currentTurn + 1}`}'s turn`
                   }
                 </h2>
                 <p className="text-sm text-cyan-100/60">Waiting for their move...</p>
