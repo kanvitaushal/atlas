@@ -96,7 +96,16 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
       setMode('join') // Switch to join mode to show room code
     } catch (err) {
       console.error('MultiplayerLobby: Failed to create game', err)
-      setError(err instanceof Error ? err.message : 'Failed to create game')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create game'
+      
+      // Check for specific database errors
+      if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
+        setError('Database schema not updated. Please run the SQL commands in Supabase first.')
+      } else if (errorMessage.includes('duplicate key')) {
+        setError('Room code already exists. Please try again.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }

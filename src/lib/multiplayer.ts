@@ -389,6 +389,27 @@ class MultiplayerService {
     return data
   }
 
+  async getGamePlayers(sessionId: string): Promise<GamePlayer[]> {
+    const supabase = getSupabase()
+    if (!supabase) return []
+
+    console.log('MultiplayerService: Getting players for session', sessionId)
+
+    const { data, error } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('game_session_id', sessionId)
+      .order('player_index')
+
+    if (error) {
+      console.error('MultiplayerService: Failed to get players', error)
+      return []
+    }
+
+    console.log('MultiplayerService: Players loaded', data)
+    return data || []
+  }
+
   async getGameMoves(sessionId: string): Promise<GameMove[]> {
     const supabase = getSupabase()
     if (!supabase) return []
