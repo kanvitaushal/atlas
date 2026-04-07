@@ -364,20 +364,29 @@ class MultiplayerService {
       .eq('room_code', roomCode)
       .single()
 
-    return error ? null : data
+    if (error) return null
+    return data
   }
 
-  async getGamePlayers(sessionId: string): Promise<GamePlayer[]> {
+  async getGameSessionById(sessionId: string): Promise<GameSession | null> {
     const supabase = getSupabase()
-    if (!supabase) return []
+    if (!supabase) return null
+
+    console.log('MultiplayerService: Getting session by ID', sessionId)
 
     const { data, error } = await supabase
-      .from('game_players')
+      .from('game_sessions')
       .select('*')
-      .eq('game_session_id', sessionId)
-      .order('player_index')
+      .eq('id', sessionId)
+      .single()
 
-    return error ? [] : data || []
+    if (error) {
+      console.error('MultiplayerService: Failed to get session by ID', error)
+      return null
+    }
+
+    console.log('MultiplayerService: Session found by ID', data)
+    return data
   }
 
   async getGameMoves(sessionId: string): Promise<GameMove[]> {

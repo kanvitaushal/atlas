@@ -34,15 +34,30 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
   useEffect(() => {
     const loadGameData = async () => {
       try {
+        console.log('MultiplayerGameView: Loading game data for session', sessionId)
+        
+        // Load the game session first
+        const gameSession = await multiplayerService.getGameSessionById(sessionId)
+        if (!gameSession) {
+          throw new Error('Game session not found')
+        }
+        
+        console.log('MultiplayerGameView: Game session loaded', gameSession)
+        setSession(gameSession)
+        setCurrentTurn(gameSession.current_turn_index)
+        
+        // Load players and moves
         const [gamePlayers, gameMoves] = await Promise.all([
           multiplayerService.getGamePlayers(sessionId),
           multiplayerService.getGameMoves(sessionId)
         ])
 
+        console.log('MultiplayerGameView: Players and moves loaded', { gamePlayers, gameMoves })
         setPlayers(gamePlayers)
         setMoves(gameMoves)
         setLoading(false)
       } catch (err) {
+        console.error('MultiplayerGameView: Failed to load game data', err)
         setError(err instanceof Error ? err.message : 'Failed to load game')
         setLoading(false)
       }
