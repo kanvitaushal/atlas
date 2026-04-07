@@ -125,8 +125,8 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         currentPlayer.player_index,
         answer,
         place,
-        validation.ok,
-        validation.ok ? 1 : 0
+        true, // isValid
+        1 // points
       )
 
       playValid()
@@ -135,7 +135,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit move')
     }
-  }, [user, currentPlayer, isMyTurn, input, sessionId, index, requiredLetter])
+  }, [user, currentPlayer, isMyTurn, input, sessionId, index, requiredLetter, moves])
 
   const handleLeave = () => {
     playClick()

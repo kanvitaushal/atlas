@@ -28,6 +28,12 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
         onSessionUpdate: (updatedSession) => {
           console.log('MultiplayerLobby: Session updated', updatedSession)
           setSession(updatedSession)
+          
+          // If game starts, navigate to game view
+          if (updatedSession.status === 'playing' && session.status === 'waiting') {
+            console.log('MultiplayerLobby: Game started, navigating to game')
+            onGameStart(updatedSession.id)
+          }
         },
         onPlayerUpdate: (updatedPlayers) => {
           console.log('MultiplayerLobby: Players updated', updatedPlayers)
@@ -44,6 +50,13 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
       // Fallback polling for player updates
       const pollInterval = setInterval(async () => {
         try {
+          const updatedSession = await multiplayerService.getGameSessionById(session.id)
+          if (updatedSession && updatedSession.status === 'playing' && session.status === 'waiting') {
+            console.log('MultiplayerLobby: Game started via polling, navigating to game')
+            onGameStart(updatedSession.id)
+            return
+          }
+          
           const updatedPlayers = await multiplayerService.getGamePlayers(session.id)
           console.log('MultiplayerLobby: Polling players', updatedPlayers)
           setPlayers(prevPlayers => {
@@ -65,7 +78,7 @@ export function MultiplayerLobby({ onGameStart, onBack }: MultiplayerLobbyProps)
         clearInterval(pollInterval)
       }
     }
-  }, [session?.id])
+  }, [session?.id, session?.status, onGameStart])
 
   const createGame = async () => {
     if (!user || !roomName.trim() || !playerName.trim()) {
