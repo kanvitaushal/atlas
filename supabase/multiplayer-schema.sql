@@ -135,3 +135,8 @@ CREATE INDEX idx_game_players_user_id ON game_players(user_id);
 CREATE INDEX idx_game_moves_session_id ON game_moves(game_session_id);
 CREATE INDEX idx_leaderboard_entries_user_id ON leaderboard_entries(user_id);
 CREATE INDEX idx_leaderboard_entries_score ON leaderboard_entries(final_score DESC);
+
+-- Enable Realtime for multiplayer tables
+ALTER PUBLICATION supabase_realtime ADD TABLE game_sessions;
+ALTER PUBLICATION supabase_realtime ADD TABLE game_players;
+ALTER PUBLICATION supabase_realtime ADD TABLE game_moves;
