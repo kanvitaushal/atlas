@@ -109,6 +109,40 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
     }
   }, [isMyTurn])
 
+  // RESTORED: Move synchronization polling (but NOT turn polling)
+  // Keep move polling to ensure countries sync between players
+  useEffect(() => {
+    if (!session) return
+
+    const pollingInterval = setInterval(async () => {
+      try {
+        console.log('MultiplayerGameView: Polling for move updates...')
+        const [freshSession, freshMoves] = await Promise.all([
+          multiplayerService.getGameSessionById(session.id),
+          multiplayerService.getGameMoves(session.id)
+        ])
+        
+        // ONLY update moves, NOT turn (turn handled by real-time subscription)
+        if (freshMoves) {
+          console.log('MultiplayerGameView: Polling - moves updated', freshMoves)
+          setMoves(freshMoves)
+        }
+        
+        // Only update session if it's NOT a turn change (to avoid conflicts)
+        if (freshSession && freshSession.current_turn_index === session.current_turn_index) {
+          console.log('MultiplayerGameView: Polling - session updated (non-turn change)', freshSession)
+          setSession(freshSession)
+        }
+      } catch (err) {
+        console.error('MultiplayerGameView: Failed to poll for updates', err)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => {
+      clearInterval(pollingInterval)
+    }
+  }, [session])
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
