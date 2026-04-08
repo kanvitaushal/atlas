@@ -44,6 +44,7 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
         
         console.log('MultiplayerGameView: Game session loaded', gameSession)
         setSession(gameSession)
+        console.log('TURN UPDATE TRIGGERED FROM: INITIAL_LOAD, value:', gameSession.current_turn_index)
         setCurrentTurn(gameSession.current_turn_index)
         console.log('MultiplayerGameView: Set currentTurn from session', gameSession.current_turn_index)
         
@@ -75,8 +76,9 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
           console.log('MultiplayerGameView: Session update received', newSession)
           setSession(newSession)
           console.log('MultiplayerGameView: current_turn_index from session:', newSession.current_turn_index)
-          console.log('MultiplayerGameView: Setting currentTurn from session update:', newSession.current_turn_index)
+          console.log('TURN UPDATE TRIGGERED FROM: REALTIME_SUBSCRIPTION, value:', newSession.current_turn_index)
           setCurrentTurn(newSession.current_turn_index)
+          console.log('MultiplayerGameView: Setting currentTurn from session update:', newSession.current_turn_index)
           
           if (newSession.status === 'finished') {
             onGameEnd(newSession.scores)
@@ -94,32 +96,9 @@ export function MultiplayerGameView({ sessionId, index, onLeave, onGameEnd }: Mu
 
       console.log('MultiplayerGameView: Subscription active, channel status:')
 
-      // FALLBACK POLLING: Ensure moves sync even if subscription fails
-      const pollInterval = setInterval(async () => {
-        try {
-          console.log('MultiplayerGameView: Polling for updates...')
-          const [freshSession, freshMoves] = await Promise.all([
-            multiplayerService.getGameSessionById(session.id),
-            multiplayerService.getGameMoves(session.id)
-          ])
-          
-          if (freshSession) {
-            console.log('MultiplayerGameView: Polling - session updated', freshSession)
-            setSession(freshSession)
-            setCurrentTurn(freshSession.current_turn_index)
-          }
-          
-          console.log('MultiplayerGameView: Polling - moves updated', freshMoves)
-          setMoves(freshMoves)
-        } catch (err) {
-          console.error('MultiplayerGameView: Failed to poll for updates', err)
-        }
-      }, 2000) // Poll every 2 seconds
-
       return () => {
-        console.log('MultiplayerGameView: Cleaning up subscription and polling for session', session.id)
+        console.log('MultiplayerGameView: Cleaning up subscription for session', session.id)
         multiplayerService.unsubscribe(session.id)
-        clearInterval(pollInterval)
       }
     }
   }, [sessionId, onGameEnd, session])

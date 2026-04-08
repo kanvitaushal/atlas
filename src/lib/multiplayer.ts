@@ -266,11 +266,37 @@ class MultiplayerService {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'game_sessions',
+          filter: `id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Session update:', payload)
+          if (payload.new && callbacks.onSessionUpdate) {
+            callbacks.onSessionUpdate(payload.new as GameSession)
+          }
+        }
+      )
       .subscribe((status) => {
-        console.log('Subscription status:', status)
+        console.log('Subscription status changed:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('MultiplayerService: Subscription SUBSCRIBED successfully')
+        } else if (status === 'CLOSED') {
+          console.error('MultiplayerService: Subscription CLOSED - this is the issue!')
+          console.error('MultiplayerService: Attempting to resubscribe...')
+          // Attempt to resubscribe automatically
+          setTimeout(() => {
+            this.subscribeToGameSession(sessionId, callbacks)
+          }, 1000)
+        }
       })
 
     this.channels.set(sessionId, channel)
+    console.log('MultiplayerService: Subscription setup complete for session', sessionId)
     return channel
   }
 
@@ -394,6 +420,7 @@ class MultiplayerService {
       throw error
     }
 
+    console.log('TURN UPDATE TRIGGERED FROM: DATABASE_UPDATE, value:', playerIndex)
     console.log('MultiplayerService: Turn updated successfully in database', { sessionId, newTurnIndex: playerIndex })
   }
 
